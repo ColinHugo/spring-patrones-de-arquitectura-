@@ -2,6 +2,7 @@ package com.atlas.bank.transaction.service.transfer;
 
 import com.atlas.bank.account.exception.AccountNotFoundException;
 import com.atlas.bank.account.model.Account;
+import com.atlas.bank.shared.model.Money;
 import com.atlas.bank.transaction.model.Transaction;
 import com.atlas.bank.account.repository.AccountRepository;
 import com.atlas.bank.transaction.repository.TransactionRepository;
@@ -88,8 +89,12 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
     @Override
     protected void execute( TransferContext context, BigDecimal fee ) {
 
-        context.from().setBalance( context.from().getBalance().subtract( context.amount() ).subtract( fee ) );
-        context.to().setBalance( context.to().getBalance().add( context.amount() ) );
+        BigDecimal newFromBalance = context.from().getBalance().getAmount().subtract( context.amount() ).subtract( fee );
+        BigDecimal newToBalance = context.to().getBalance().getAmount().add( context.amount() );
+
+        context.from().setBalance( Money.of( newFromBalance, context.from().getBalance().getCurrency() ) );
+        context.to().setBalance( Money.of( newToBalance, context.to().getBalance().getCurrency() ) );
+
         accountRepository.save( context.from() );
         accountRepository.save( context.to() );
 

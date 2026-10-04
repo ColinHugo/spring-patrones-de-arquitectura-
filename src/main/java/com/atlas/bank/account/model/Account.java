@@ -1,5 +1,7 @@
 package com.atlas.bank.account.model;
 
+import com.atlas.bank.shared.model.Currency;
+import com.atlas.bank.shared.model.Money;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -34,8 +36,18 @@ public class Account {
     @Column( nullable = false, length = 20 )
     private AccountType type;
 
-    @Column( nullable = false, length = 20 )
-    private BigDecimal balance;
+    @Embedded
+    @AttributeOverrides( {
+            @AttributeOverride(
+                    name = "amount",
+                    column = @Column( name = "balance", nullable = false )
+            ),
+            @AttributeOverride(
+                    name = "currency",
+                    column = @Column( name = "currency", nullable = false, length = 3 )
+            )
+    } )
+    private Money balance;
 
     @Enumerated( EnumType.STRING )
     @Column( nullable = false, length = 20 )
@@ -54,7 +66,7 @@ public class Account {
         }
 
         if ( Objects.isNull( balance ) ) {
-            balance = BigDecimal.ZERO;
+            balance = Money.zero( Currency.MXN );
         }
 
     }
