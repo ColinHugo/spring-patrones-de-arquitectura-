@@ -2,18 +2,13 @@ package com.atlas.bank.transaction.service.transfer;
 
 import com.atlas.bank.account.exception.AccountNotFoundException;
 import com.atlas.bank.account.model.Account;
-import com.atlas.bank.account.model.AccountStatus;
-import com.atlas.bank.transaction.exception.AccountNotActiveException;
-import com.atlas.bank.transaction.exception.InsufficientFundsException;
 import com.atlas.bank.transaction.model.Transaction;
 import com.atlas.bank.account.repository.AccountRepository;
 import com.atlas.bank.transaction.repository.TransactionRepository;
 import com.atlas.bank.transaction.service.event.TransactionExecutedEvent;
-import com.atlas.bank.transaction.service.exception.FraudCheckException;
 import com.atlas.bank.transaction.service.factory.TransactionFactory;
 import com.atlas.bank.transaction.service.fee.FeeCalculator;
-import com.atlas.bank.transaction.service.fraud.FraudCheckResult;
-import com.atlas.bank.transaction.service.fraud.FraudChecker;
+import com.atlas.bank.transaction.validation.chain.TransferValidator;
 import jakarta.transaction.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -28,18 +23,18 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
 
     private final AccountRepository accountRepository;
 
-    private final FraudChecker fraudChecker;
-
     private final List< FeeCalculator > feeCalculators;
+    private final List< TransferValidator > validators;
 
     public TransferService( TransactionRepository transactionRepository, ApplicationEventPublisher eventPublisher,
-            AccountRepository accountRepository, FraudChecker fraudChecker, List< FeeCalculator > feeCalculators ) {
+                            AccountRepository accountRepository, List< FeeCalculator > feeCalculators,
+                            List< TransferValidator > validators ) {
 
         super( transactionRepository );
         this.eventPublisher = eventPublisher;
         this.accountRepository = accountRepository;
-        this.fraudChecker = fraudChecker;
         this.feeCalculators = feeCalculators;
+        this.validators = validators;
     }
 
     @Override
@@ -71,25 +66,7 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
 
     @Override
     protected void validate( TransferContext context ) {
-
-        if ( context.from().getStatus() != AccountStatus.ACTIVE ) {
-            throw new AccountNotActiveException( context.from().getId(), context.from().getStatus().name() );
-        }
-
-        if ( context.to().getStatus() != AccountStatus.ACTIVE  ) {
-            throw new AccountNotActiveException( context.to().getId(), context.to().getStatus().name() );
-        }
-
-        if ( context.from().getBalance().compareTo( context.amount() ) < 0 ) {
-            throw new InsufficientFundsException( context.from().getId(), context.from().getBalance(), context.amount() );
-        }
-
-        FraudCheckResult fraudCheckResult = fraudChecker.check( context.from().getId(), context.amount() );
-
-        if ( fraudCheckResult.blocked() ) {
-            throw new FraudCheckException( fraudCheckResult.reason() );
-        }
-
+        validators.forEach( validator -> validator.validate( context ) );
     }
 
     @Override
