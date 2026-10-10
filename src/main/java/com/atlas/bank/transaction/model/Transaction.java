@@ -83,4 +83,11 @@ public class Transaction extends AbstractAggregateRoot< Transaction > {
         registerEvent( new TransactionExecutedEvent( id, type.name(), sourceAccountId, targetAccountId, amount, fee ) );
     }
 
+    public void executedTransfer() {
+        advanceTo( getState().validate() );
+        advanceTo( getState().execute() );
+
+        markAsExecuted();
+    }
+
 }
