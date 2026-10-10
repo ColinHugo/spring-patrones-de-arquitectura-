@@ -2,17 +2,16 @@ package com.atlas.bank.account.model;
 
 import com.atlas.bank.shared.model.Currency;
 import com.atlas.bank.shared.model.Money;
+import com.atlas.bank.transaction.exception.InsufficientFundsException;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
 @EqualsAndHashCode( onlyExplicitlyIncluded = true )
 @Entity
 @Table( name = "accounts" )
@@ -56,6 +55,8 @@ public class Account {
     @Column( name = "created_at", nullable = false, updatable = false )
     private LocalDateTime createdAt;
 
+    private Long customerId;
+
     @PrePersist
     public void prePersist() {
 
@@ -68,6 +69,30 @@ public class Account {
         if ( Objects.isNull( balance ) ) {
             balance = Money.zero( Currency.MXN );
         }
+
+    }
+
+    public void deposit( Money amount ) {
+
+        if ( amount.isNegative() ) {
+            throw new IllegalArgumentException( "El monto a depositar no puede ser negativo" );
+        }
+
+        balance = balance.add( amount );
+
+    }
+
+    public void withdraw( Money amount ) {
+
+        if ( amount.isNegative() ) {
+            throw new IllegalArgumentException( "El monto a retirar no puede ser negativo" );
+        }
+
+        if ( balance.isLessThan( amount ) ) {
+            throw new InsufficientFundsException( id, balance.getAmount(), amount.getAmount() );
+        }
+
+        balance = balance.subtract( amount );
 
     }
 

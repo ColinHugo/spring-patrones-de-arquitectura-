@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
+@EqualsAndHashCode( onlyExplicitlyIncluded = true )
 @Entity
 @Table( name = "transactions" )
 public class Transaction {
