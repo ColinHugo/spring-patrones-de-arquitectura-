@@ -2,17 +2,14 @@ package com.atlas.bank.transaction.service.transfer;
 
 import com.atlas.bank.account.exception.AccountNotFoundException;
 import com.atlas.bank.account.model.Account;
-import com.atlas.bank.shared.model.Money;
 import com.atlas.bank.transaction.model.Transaction;
 import com.atlas.bank.account.repository.AccountRepository;
 import com.atlas.bank.transaction.repository.TransactionRepository;
 import com.atlas.bank.transaction.service.domain.TransferDomainService;
-import com.atlas.bank.transaction.service.event.TransactionExecutedEvent;
 import com.atlas.bank.transaction.service.factory.TransactionFactory;
 import com.atlas.bank.transaction.service.fee.FeeCalculator;
 import com.atlas.bank.transaction.validation.chain.TransferValidator;
 import jakarta.transaction.Transactional;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,8 +18,6 @@ import java.util.List;
 @Service
 public class TransferService extends TransactionProcessor< TransferContext > implements ITransferService {
 
-    private final ApplicationEventPublisher eventPublisher;
-
     private final AccountRepository accountRepository;
 
     private final List< FeeCalculator > feeCalculators;
@@ -30,12 +25,11 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
 
     private final TransferDomainService transferDomainService;
 
-    public TransferService( TransactionRepository transactionRepository, ApplicationEventPublisher eventPublisher,
+    public TransferService( TransactionRepository transactionRepository,
                             AccountRepository accountRepository, List< FeeCalculator > feeCalculators,
                             List< TransferValidator > validators, TransferDomainService transferDomainService ) {
 
         super( transactionRepository );
-        this.eventPublisher = eventPublisher;
         this.accountRepository = accountRepository;
         this.feeCalculators = feeCalculators;
         this.validators = validators;
@@ -59,16 +53,9 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
 
         transaction.advanceTo( transaction.getState().validate() );
         transaction.advanceTo( transaction.getState().execute() );
-        transactionRepository.save( transaction );
+        transaction.markAsExecuted();
 
-        eventPublisher.publishEvent( new TransactionExecutedEvent(
-                transaction.getId(),
-                transaction.getType().name(),
-                transaction.getSourceAccountId(),
-                transaction.getTargetAccountId(),
-                transaction.getAmount(),
-                transaction.getFee()
-        ) );
+        transactionRepository.save( transaction );
 
         return transaction;
 

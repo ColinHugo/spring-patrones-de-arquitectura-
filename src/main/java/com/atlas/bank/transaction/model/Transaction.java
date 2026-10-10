@@ -1,8 +1,10 @@
 package com.atlas.bank.transaction.model;
 
 import com.atlas.bank.transaction.model.state.*;
+import com.atlas.bank.transaction.service.event.TransactionExecutedEvent;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.AbstractAggregateRoot;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,10 +14,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
-@EqualsAndHashCode( onlyExplicitlyIncluded = true )
+@EqualsAndHashCode( onlyExplicitlyIncluded = true, callSuper = false )
 @Entity
 @Table( name = "transactions" )
-public class Transaction {
+public class Transaction extends AbstractAggregateRoot< Transaction > {
 
     @Id
     @GeneratedValue( strategy = GenerationType.IDENTITY )
@@ -75,6 +77,10 @@ public class Transaction {
     public void advanceTo( TransactionState newState ) {
         state = newState;
         status = newState.status();
+    }
+
+    public void markAsExecuted() {
+        registerEvent( new TransactionExecutedEvent( id, type.name(), sourceAccountId, targetAccountId, amount, fee ) );
     }
 
 }
