@@ -6,6 +6,7 @@ import com.atlas.bank.shared.model.Money;
 import com.atlas.bank.transaction.model.Transaction;
 import com.atlas.bank.account.repository.AccountRepository;
 import com.atlas.bank.transaction.repository.TransactionRepository;
+import com.atlas.bank.transaction.service.domain.TransferDomainService;
 import com.atlas.bank.transaction.service.event.TransactionExecutedEvent;
 import com.atlas.bank.transaction.service.factory.TransactionFactory;
 import com.atlas.bank.transaction.service.fee.FeeCalculator;
@@ -27,15 +28,19 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
     private final List< FeeCalculator > feeCalculators;
     private final List< TransferValidator > validators;
 
+    private final TransferDomainService transferDomainService;
+
     public TransferService( TransactionRepository transactionRepository, ApplicationEventPublisher eventPublisher,
                             AccountRepository accountRepository, List< FeeCalculator > feeCalculators,
-                            List< TransferValidator > validators ) {
+                            List< TransferValidator > validators, TransferDomainService transferDomainService ) {
 
         super( transactionRepository );
         this.eventPublisher = eventPublisher;
         this.accountRepository = accountRepository;
         this.feeCalculators = feeCalculators;
         this.validators = validators;
+        this.transferDomainService = transferDomainService;
+
     }
 
     @Override
@@ -89,11 +94,7 @@ public class TransferService extends TransactionProcessor< TransferContext > imp
     @Override
     protected void execute( TransferContext context, BigDecimal fee ) {
 
-        BigDecimal newFromBalance = context.from().getBalance().getAmount().subtract( context.amount() ).subtract( fee );
-        BigDecimal newToBalance = context.to().getBalance().getAmount().add( context.amount() );
-
-        context.from().setBalance( Money.of( newFromBalance, context.from().getBalance().getCurrency() ) );
-        context.to().setBalance( Money.of( newToBalance, context.to().getBalance().getCurrency() ) );
+        transferDomainService.transfer( context.from(), context.to(), context.amount(), fee );
 
         accountRepository.save( context.from() );
         accountRepository.save( context.to() );

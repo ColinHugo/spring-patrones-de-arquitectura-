@@ -12,6 +12,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Setter
 @EqualsAndHashCode( onlyExplicitlyIncluded = true )
 @Entity
 @Table( name = "accounts" )
