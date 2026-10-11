@@ -2,6 +2,7 @@ package com.atlas.bank.account.dto;
 
 import com.atlas.bank.account.model.Account;
 import com.atlas.bank.shared.model.Currency;
+import com.atlas.bank.shared.model.Email;
 import com.atlas.bank.shared.model.Money;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -16,9 +17,11 @@ public interface AccountMapper {
     @Mapping( target = "status", ignore = true )
     @Mapping( target = "createdAt", ignore = true )
     @Mapping( target = "balance", source = "balance", qualifiedByName = "toMoney" )
+    @Mapping( target = "email", source = "email", qualifiedByName = "toEmail" )
     Account toEntity( CreateAccountRequest request );
 
     @Mapping( target = "balance", source = "balance", qualifiedByName = "toAmount" )
+    @Mapping( target = "email", source = "email", qualifiedByName = "fromEmail" )
     AccountResponse toResponse( Account account );
 
     @Named( "toMoney" )
@@ -40,6 +43,28 @@ public interface AccountMapper {
         }
 
         return money.getAmount();
+
+    }
+
+    @Named( "toEmail" )
+    default Email toEmail( String email ) {
+
+        if ( email == null ) {
+            return null;
+        }
+
+        return Email.of( email );
+
+    }
+
+    @Named( "fromEmail" )
+    default String fromEmail( Email email ) {
+
+        if ( email == null ) {
+            return null;
+        }
+
+        return email.getValue();
 
     }
 
